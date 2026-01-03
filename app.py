@@ -18,7 +18,7 @@ os.environ['SSL_CERT_FILE'] = certifi.where()
 os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 
 # 🚨 PASTE YOUR API KEY HERE
-API_KEY = "YOUR API KEY"
+API_KEY = st.secrets["GOOGLE_API_KEY"]
 client = genai.Client(api_key=API_KEY)
 
 # --- 2. THE KNOWLEDGE BASE ---
