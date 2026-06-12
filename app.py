@@ -3,6 +3,7 @@ import os
 import certifi
 import numpy as np
 import time
+import re
 from google import genai
 from pypdf import PdfReader
 
@@ -18,9 +19,16 @@ st.set_page_config(
 os.environ['SSL_CERT_FILE'] = certifi.where()
 os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 
-# Initialize API Client
-API_KEY = st.secrets["GOOGLE_API_KEY"]
-client = genai.Client(api_key=API_KEY)
+# Initialize API Client with error handling
+try:
+    API_KEY = st.secrets.get("GOOGLE_API_KEY")
+    if not API_KEY:
+        st.error("❌ GOOGLE_API_KEY not found in secrets. Please configure it in .streamlit/secrets.toml")
+        st.stop()
+    client = genai.Client(api_key=API_KEY)
+except Exception as e:
+    st.error(f"❌ Failed to initialize API client: {e}")
+    st.stop()
 
 # --- 2. INITIAL KNOWLEDGE BASE ---
 # We use Streamlit Session State to allow the document list to grow dynamically when PDFs are added
@@ -35,25 +43,48 @@ if "documents" not in st.session_state:
 
 # --- 3. SMART AI HELPER FUNCTIONS ---
 def get_embedding(text):
+    """
+    Get embedding for text using Google Gemini API.
+    Returns normalized embedding vector or empty list on error.
+    """
+    if not text or not isinstance(text, str):
+        return []
+    
     try:
         result = client.models.embed_content(
             model="gemini-embedding-001",
             contents=text
         )
-        return result.embeddings[0].values
+        embedding = result.embeddings[0].values
+        # Normalize the embedding vector for better cosine similarity
+        embedding_array = np.array(embedding)
+        norm = np.linalg.norm(embedding_array)
+        if norm > 0:
+            embedding_array = embedding_array / norm
+        return embedding_array.tolist()
     except Exception as e:
-        st.error(f"API Connection Error: {e}")
+        st.error(f"⚠️ API Connection Error: {e}")
         return []
 
 # We cache embeddings dynamically based on the length of the document list
 @st.cache_data
 def get_all_document_embeddings(doc_list_tuple):
-    # Streamlit caching works best with immutable types like tuples
+    """
+    Get embeddings for all documents in the knowledge base.
+    Uses tuple for Streamlit caching compatibility.
+    """
     return [get_embedding(doc) for doc in doc_list_tuple]
 
 def find_best_match(user_query):
+    """
+    Find the best matching document for the user query using cosine similarity.
+    Returns (document, confidence_score) tuple.
+    """
+    if not user_query or not isinstance(user_query, str):
+        return "Sorry, I couldn't understand your question.", 0.0
+    
     query_vector = get_embedding(user_query)
-    if not query_vector:
+    if not query_vector or len(query_vector) == 0:
         return "Sorry, I couldn't understand the meaning of your question.", 0.0
         
     # Convert session list to tuple for the cached function
@@ -62,14 +93,22 @@ def find_best_match(user_query):
     
     scores = []
     for doc_vector in doc_embeddings:
-        if len(doc_vector) == 0:
+        if not doc_vector or len(doc_vector) == 0:
             scores.append(-1.0)
             continue
-        score = np.dot(query_vector, doc_vector)
-        scores.append(score)
+        try:
+            # Use normalized dot product (cosine similarity)
+            score = float(np.dot(query_vector, doc_vector))
+            scores.append(score)
+        except Exception as e:
+            st.warning(f"Error computing similarity: {e}")
+            scores.append(-1.0)
+    
+    if not scores or all(s < 0 for s in scores):
+        return "No suitable match found in the knowledge base.", 0.0
     
     best_index = np.argmax(scores)
-    return st.session_state.documents[best_index], scores[best_index]
+    return st.session_state.documents[best_index], max(0.0, scores[best_index])
 
 # --- 4. THE VISUAL STYLING ---
 st.markdown("""
@@ -118,7 +157,7 @@ st.markdown("<div class='subtitle'>A smart search terminal that understands conc
 
 # NEW FEATURE: Dynamic Interactive Welcome Guide Box
 with st.container():
-    st.markdown(f"""
+    st.markdown("""
     <div class='guide-box'>
         <div class='guide-title'>👋 New here? Here is how to use your SmartFinder Dashboard:</div>
         <div style='font-size: 14px; color: #1F2937; line-height: 1.6;'>
@@ -143,22 +182,37 @@ if uploaded_file is not None:
             if text_content:
                 raw_text += text_content + " "
         
-        # Split text into clean sentences based on periods
-        new_sentences = [s.strip() + "." for s in raw_text.split('.') if len(s.strip()) > 15]
-        
-        # Check if these sentences are already imported to prevent duplicates
-        fresh_sentences = [s for s in new_sentences if s not in st.session_state.documents]
-        
-        if fresh_sentences:
-            st.session_state.documents.extend(fresh_sentences)
-            # Clear cache so the system embeds the newly added lines on the next run
-            st.cache_data.clear()
-            st.success(f"🎉 Success! Read {len(fresh_sentences)} new sentences from **{uploaded_file.name}** and injected them into the sidebar search library!")
+        if not raw_text.strip():
+            st.warning("⚠️ Could not extract text from the PDF. It may contain only images or be corrupted.")
         else:
-            st.info("ℹ️ This file's contents are already fully loaded or contain no readable text sentences.")
+            # Split text into clean sentences using regex for better sentence boundary detection
+            # This handles periods, question marks, and exclamation marks
+            sentence_pattern = r'[.!?]+(?:\s+|$)'
+            raw_sentences = re.split(sentence_pattern, raw_text)
+            
+            # Clean and filter sentences
+            new_sentences = []
+            for s in raw_sentences:
+                cleaned = s.strip()
+                if len(cleaned) > 15:  # Only sentences with meaningful length
+                    # Add appropriate punctuation if missing
+                    if cleaned and not cleaned[-1] in '.!?':
+                        cleaned += "."
+                    new_sentences.append(cleaned)
+            
+            # Check if these sentences are already imported to prevent duplicates
+            fresh_sentences = [s for s in new_sentences if s not in st.session_state.documents]
+            
+            if fresh_sentences:
+                st.session_state.documents.extend(fresh_sentences)
+                # Clear cache so the system embeds the newly added lines on the next run
+                st.cache_data.clear()
+                st.success(f"🎉 Success! Read {len(fresh_sentences)} new sentences from **{uploaded_file.name}** and injected them into the sidebar search library!")
+            else:
+                st.info("ℹ️ This file's contents are already fully loaded or contain no readable text sentences.")
             
     except Exception as e:
-        st.error(f"Could not read PDF structure: {e}")
+        st.error(f"❌ Could not read PDF structure: {e}")
 
 st.markdown("---")
 
@@ -179,9 +233,8 @@ if query:
     
     with col2:
         st.markdown("#### 📊 Accuracy rating")
-        display_score = int(confidence * 100)
-        if display_score > 100: display_score = 100
-        if display_score < 0: display_score = 0
+        # Confidence is now guaranteed to be between 0 and 1 (normalized embedding dot product)
+        display_score = min(100, max(0, int(confidence * 100)))
         
         if confidence > 0.4:  
             st.metric(label="Meaning Match", value=f"{display_score}%", delta="Strong Link")
