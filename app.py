@@ -35,15 +35,10 @@ def get_embedding(text):
     try:
         # UPDATED: Using the currently active text-embedding-004 model structure for genai SDK
         result = client.models.embed_content(
-            model="text-embedding-004", 
+            model="gemini-embedding-001", 
             contents=text
         )
-        # Handle structural extraction based on the latest Google GenAI SDK return format
-        if hasattr(result, 'embeddings') and result.embeddings:
-            return result.embeddings[0].values
-        elif hasattr(result, 'embedding') and result.embedding:
-            return result.embedding.values
-        return []
+        return result.embeddings[0].values
     except Exception as e:
         st.error(f"API Connection Error: {e}")
         return []
