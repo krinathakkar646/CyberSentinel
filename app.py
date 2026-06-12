@@ -4,8 +4,9 @@ import certifi
 import numpy as np
 import time
 from google import genai
+from pypdf import PdfReader
 
-# --- 1. APP CONFIGURATION (Clean & Modern Branding) ---
+# --- 1. APP CONFIGURATION ---
 st.set_page_config(
     page_title="SmartFinder AI", 
     page_icon="🔍", 
@@ -17,18 +18,20 @@ st.set_page_config(
 os.environ['SSL_CERT_FILE'] = certifi.where()
 os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 
-# 🚨 PASTE YOUR API KEY HERE
+# Initialize API Client
 API_KEY = st.secrets["GOOGLE_API_KEY"]
 client = genai.Client(api_key=API_KEY)
 
-# --- 2. THE KNOWLEDGE BASE (Your Uploaded Sentences) ---
-documents = [
-    "The 'DarkVisor' group targets financial institutions using Phishing emails.",
-    "CVE-2026-999 is a critical vulnerability in Smart Toasters allowing remote code execution.",
-    "SQL Injection attacks can be prevented by using Parameterized Queries in Python.",
-    "The hacker known as 'GhostShell' was last seen using IP 192.168.1.50.",
-    "To secure a Linux server, always disable Root login via SSH."
-]
+# --- 2. INITIAL KNOWLEDGE BASE ---
+# We use Streamlit Session State to allow the document list to grow dynamically when PDFs are added
+if "documents" not in st.session_state:
+    st.session_state.documents = [
+        "The 'DarkVisor' group targets financial institutions using Phishing emails.",
+        "CVE-2026-999 is a critical vulnerability in Smart Toasters allowing remote code execution.",
+        "SQL Injection attacks can be prevented by using Parameterized Queries in Python.",
+        "The hacker known as 'GhostShell' was last seen using IP 192.168.1.50.",
+        "To secure a Linux server, always disable Root login via SSH."
+    ]
 
 # --- 3. SMART AI HELPER FUNCTIONS ---
 def get_embedding(text):
@@ -42,116 +45,145 @@ def get_embedding(text):
         st.error(f"API Connection Error: {e}")
         return []
 
-# Caching saves your API limits and speeds up the search drastically
+# We cache embeddings dynamically based on the length of the document list
 @st.cache_data
-def get_all_document_embeddings():
-    return [get_embedding(doc) for doc in documents]
+def get_all_document_embeddings(doc_list_tuple):
+    # Streamlit caching works best with immutable types like tuples
+    return [get_embedding(doc) for doc in doc_list_tuple]
 
 def find_best_match(user_query):
     query_vector = get_embedding(user_query)
     if not query_vector:
         return "Sorry, I couldn't understand the meaning of your question.", 0.0
         
-    doc_embeddings = get_all_document_embeddings()
+    # Convert session list to tuple for the cached function
+    current_docs = tuple(st.session_state.documents)
+    doc_embeddings = get_all_document_embeddings(current_docs)
     
     scores = []
     for doc_vector in doc_embeddings:
         if len(doc_vector) == 0:
             scores.append(-1.0)
             continue
-        # Math that measures how closely the "meanings" align
         score = np.dot(query_vector, doc_vector)
         scores.append(score)
     
     best_index = np.argmax(scores)
-    return documents[best_index], scores[best_index]
+    return st.session_state.documents[best_index], scores[best_index]
 
-# --- 4. THE NEW LOOK UI (Modern Corporate Tech Style) ---
-
-# Custom styling for a bright, professional appearance
+# --- 4. THE VISUAL STYLING ---
 st.markdown("""
 <style>
-    /* Styling the main title banner */
-    .main-title {
-        color: #1E3A8A; /* Deep Trustworthy Blue */
-        font-size: 38px;
-        font-weight: 700;
-        margin-bottom: 5px;
-    }
-    .subtitle {
-        color: #4B5563; /* Slate Gray */
-        font-size: 16px;
+    .main-title { color: #1E3A8A; font-size: 36px; font-weight: 700; margin-bottom: 5px; }
+    .subtitle { color: #4B5563; font-size: 15px; margin-bottom: 20px; }
+    .guide-box {
+        background-color: #EFF6FF;
+        border-left: 5px solid #3B82F6;
+        padding: 18px;
+        border-radius: 8px;
         margin-bottom: 25px;
     }
-    /* Highlight box for information cards */
-    .info-card {
-        background-color: #F3F4F6;
-        border-left: 5px solid #3B82F6;
-        padding: 15px;
-        border-radius: 4px;
-    }
+    .guide-title { color: #1D4ED8; font-weight: 600; font-size: 16px; margin-bottom: 8px; }
 </style>
 """, unsafe_allow_html=True)
 
-# Sidebar - Beginner Friendly Info Panel
+# --- 5. SIDEBAR DESIGN (The Document Hub) ---
 with st.sidebar:
     st.markdown("<h2 style='color: #1E3A8A; margin-bottom: 0;'>🔍 SmartFinder</h2>", unsafe_allow_html=True)
     st.caption("Your Intelligent AI Document Assistant")
     st.markdown("---")
     
-    # System stats rewritten in regular English
-    st.write("🤖 **AI Engine:** Ready")
-    st.write("📄 **Documents Loaded:** 5 Files Connected")
+    st.write("🤖 **AI Engine:** Online & Ready")
+    st.write(f"📄 **Knowledge Base:** {len(st.session_state.documents)} Sentences Memorized")
     st.markdown("---")
     
-    # Option 2 Integration - Completely beginner friendly explanation
-    with st.expander("📁 View the files I can read", expanded=True):
-        st.markdown("<small>I have read and memorized these 5 specific security notes. You can ask me about them using your own words!</small>", unsafe_allow_html=True)
+    # Live Document View
+    with st.expander("📁 View Active Knowledge Base Files", expanded=True):
+        st.markdown("<small>Here are the facts I currently remember. I will search through these to answer you!</small>", unsafe_allow_html=True)
         st.write("")
-        for doc in documents:
+        for doc in st.session_state.documents:
             st.markdown(f"<div style='font-size: 13px; margin-bottom: 8px; color: #374151;'>📍 {doc}</div>", unsafe_allow_html=True)
             
     st.markdown("---")
-    st.caption("Powered by Smart Meaning-Based Search")
+    # Reset button to clear uploaded PDFs and return to baseline
+    if st.button("🔄 Reset to Default Documents"):
+        if "documents" in st.session_state:
+            del st.session_state.documents
+        st.cache_data.clear()
+        st.rerun()
 
-# Main Interface Header
-st.markdown("<div class='main-title'>🔍 SmartFinder AI</div>", unsafe_allow_html=True)
-st.markdown("<div class='subtitle'>Ask a question in normal, everyday English. Our AI will understand what you mean and find the perfect match—even if you don't use exact words!</div>", unsafe_allow_html=True)
+# --- 6. MAIN PANEL UI ---
+st.markdown("<div class='main-title'>🔍 SmartFinder AI Dashboard</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>A smart search terminal that understands concepts, not just words.</div>", unsafe_allow_html=True)
 
-# Clean Text Input
-query = st.text_input("💬 What are you looking for today?", placeholder="e.g., Which hacker group is going after banks?")
+# NEW FEATURE: Dynamic Interactive Welcome Guide Box
+with st.container():
+    st.markdown(f"""
+    <div class='guide-box'>
+        <div class='guide-title'>👋 New here? Here is how to use your SmartFinder Dashboard:</div>
+        <div style='font-size: 14px; color: #1F2937; line-height: 1.6;'>
+            1️⃣ <b>Look at the Sidebar:</b> Open the dropdown menu on the left to see what text notes are already saved in the brain.<br>
+            2️⃣ <b>Test the Core:</b> Type a question in the search bar below using completely different words (e.g., instead of copying a sentence exactly, try phrasing it like a casual conversation).<br>
+            3️⃣ <b>Upload Your Own Knowledge:</b> Drop a custom PDF file into the upload zone below to watch the AI read, split, and immediately adapt to your own documents!
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# NEW FEATURE: Document Uploader Component
+st.markdown("### 📥 Expand the Knowledge Base")
+uploaded_file = st.file_uploader("Upload a PDF document to add it to the AI's memory matrix", type=["pdf"])
+
+if uploaded_file is not None:
+    # Read text from PDF safely
+    try:
+        reader = PdfReader(uploaded_file)
+        raw_text = ""
+        for page in reader.pages:
+            text_content = page.extract_text()
+            if text_content:
+                raw_text += text_content + " "
+        
+        # Split text into clean sentences based on periods
+        new_sentences = [s.strip() + "." for s in raw_text.split('.') if len(s.strip()) > 15]
+        
+        # Check if these sentences are already imported to prevent duplicates
+        fresh_sentences = [s for s in new_sentences if s not in st.session_state.documents]
+        
+        if fresh_sentences:
+            st.session_state.documents.extend(fresh_sentences)
+            # Clear cache so the system embeds the newly added lines on the next run
+            st.cache_data.clear()
+            st.success(f"🎉 Success! Read {len(fresh_sentences)} new sentences from **{uploaded_file.name}** and injected them into the sidebar search library!")
+        else:
+            st.info("ℹ️ This file's contents are already fully loaded or contain no readable text sentences.")
+            
+    except Exception as e:
+        st.error(f"Could not read PDF structure: {e}")
+
+st.markdown("---")
+
+# --- 7. THE INTERACTIVE SEARCH CONSOLE ---
+st.markdown("### 💬 Ask a Question")
+query = st.text_input("What information are you trying to track down?", placeholder="e.g., Give me details on smart appliance safety updates...")
 
 if query:
-    # Friendly waiting indicator
-    with st.spinner("AI is reading through your files to find the right answer..."):
-        time.sleep(0.8) # Quick smooth transition
+    with st.spinner("AI is analyzing text blocks and scanning data coordinates..."):
+        time.sleep(0.6)
         best_doc, confidence = find_best_match(query)
     
-    # Laying out the results clearly in two columns
     col1, col2 = st.columns([3, 1])
     
     with col1:
-        st.markdown("### 📄 Best Matching Document Found")
+        st.markdown("#### 📄 Best Matching Statement Found")
         st.info(f"**\"{best_doc}\"**")
     
     with col2:
-        st.markdown("### 📊 Search Confidence")
-        # Turn raw mathematical dot product into a friendly, readable percentage
+        st.markdown("#### 📊 Accuracy rating")
         display_score = int(confidence * 100)
         if display_score > 100: display_score = 100
         if display_score < 0: display_score = 0
         
         if confidence > 0.4:  
-            st.metric(label="Meaning Match Accuracy", value=f"{display_score}%", delta="Strong Match")
+            st.metric(label="Meaning Match", value=f"{display_score}%", delta="Strong Link")
         else:
-            st.metric(label="Meaning Match Accuracy", value=f"{display_score}%", delta="Weak Match", delta_color="inverse")
-
-    # Kept the deep analysis but gave it an easy description
-    with st.expander("🔬 Technical View (How the AI saw your question)"):
-        q_emb = get_embedding(query)
-        if q_emb:
-            st.write("The AI converted your sentence into these structural mathematical coordinates to calculate the meaning:")
-            st.write(q_emb[:10])
-            st.caption("...showing first 10 dimensions of the meaning-vector.")
-        else:
-            st.write("Could not retrieve mathematical vector logic.")
+            st.metric(label="Meaning Match", value=f"{display_score}%", delta="Low Link", delta_color="inverse")
