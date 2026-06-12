@@ -33,21 +33,39 @@ documents = [
 # --- 3. HELPER FUNCTIONS ---
 def get_embedding(text):
     try:
+        # UPDATED: Using the currently active text-embedding-004 model structure for genai SDK
         result = client.models.embed_content(
-            model="text-embedding-004",
+            model="text-embedding-004", 
             contents=text
         )
-        return result.embeddings[0].values
+        # Handle structural extraction based on the latest Google GenAI SDK return format
+        if hasattr(result, 'embeddings') and result.embeddings:
+            return result.embeddings[0].values
+        elif hasattr(result, 'embedding') and result.embedding:
+            return result.embedding.values
+        return []
     except Exception as e:
         st.error(f"API Connection Error: {e}")
         return []
 
+# OPTIMIZATION: Cache the document embeddings so you don't ping the API 5 times on every keystroke
+@st.cache_data
+def get_all_document_embeddings():
+    return [get_embedding(doc) for doc in documents]
+
 def find_best_match(user_query):
     query_vector = get_embedding(user_query)
-    doc_embeddings = [get_embedding(doc) for doc in documents]
+    if not query_vector:
+        return "Error generating query vector.", 0.0
+        
+    doc_embeddings = get_all_document_embeddings()
     
     scores = []
     for doc_vector in doc_embeddings:
+        if len(doc_vector) == 0:
+            scores.append(-1.0)
+            continue
+        # Cosine similarity helper or dot product
         score = np.dot(query_vector, doc_vector)
         scores.append(score)
     
@@ -99,10 +117,14 @@ if query:
     with col2:
         st.subheader("📊 Confidence")
         # Color code the confidence score
-        if confidence > 0.7:
+        if confidence > 0.4:  # Adjusted confidence threshold typical for raw dot products
             st.metric(label="Match Accuracy", value=f"{int(confidence * 100)}%", delta="High Certainty")
         else:
             st.metric(label="Match Accuracy", value=f"{int(confidence * 100)}%", delta="Low Certainty", delta_color="inverse")
 
     with st.expander("🔎 View Vector Analysis"):
-        st.write(f"Query Vector (First 10 Dims): {str(get_embedding(query)[:10])}...")
+        q_emb = get_embedding(query)
+        if q_emb:
+            st.write(f"Query Vector (First 10 Dims): {str(q_emb[:10])}...")
+        else:
+            st.write("Could not retrieve vector dimension log.")
