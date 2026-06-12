@@ -5,10 +5,10 @@ import numpy as np
 import time
 from google import genai
 
-# --- 1. APP CONFIGURATION (The Branding) ---
+# --- 1. APP CONFIGURATION (Clean & Modern Branding) ---
 st.set_page_config(
-    page_title="CyberSentinel", 
-    page_icon="🛡️", 
+    page_title="SmartFinder AI", 
+    page_icon="🔍", 
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -21,7 +21,7 @@ os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 API_KEY = st.secrets["GOOGLE_API_KEY"]
 client = genai.Client(api_key=API_KEY)
 
-# --- 2. THE KNOWLEDGE BASE ---
+# --- 2. THE KNOWLEDGE BASE (Your Uploaded Sentences) ---
 documents = [
     "The 'DarkVisor' group targets financial institutions using Phishing emails.",
     "CVE-2026-999 is a critical vulnerability in Smart Toasters allowing remote code execution.",
@@ -30,12 +30,11 @@ documents = [
     "To secure a Linux server, always disable Root login via SSH."
 ]
 
-# --- 3. HELPER FUNCTIONS ---
+# --- 3. SMART AI HELPER FUNCTIONS ---
 def get_embedding(text):
     try:
-        # UPDATED: Using the currently active text-embedding-004 model structure for genai SDK
         result = client.models.embed_content(
-            model="gemini-embedding-001", 
+            model="gemini-embedding-001",
             contents=text
         )
         return result.embeddings[0].values
@@ -43,7 +42,7 @@ def get_embedding(text):
         st.error(f"API Connection Error: {e}")
         return []
 
-# OPTIMIZATION: Cache the document embeddings so you don't ping the API 5 times on every keystroke
+# Caching saves your API limits and speeds up the search drastically
 @st.cache_data
 def get_all_document_embeddings():
     return [get_embedding(doc) for doc in documents]
@@ -51,7 +50,7 @@ def get_all_document_embeddings():
 def find_best_match(user_query):
     query_vector = get_embedding(user_query)
     if not query_vector:
-        return "Error generating query vector.", 0.0
+        return "Sorry, I couldn't understand the meaning of your question.", 0.0
         
     doc_embeddings = get_all_document_embeddings()
     
@@ -60,66 +59,99 @@ def find_best_match(user_query):
         if len(doc_vector) == 0:
             scores.append(-1.0)
             continue
-        # Cosine similarity helper or dot product
+        # Math that measures how closely the "meanings" align
         score = np.dot(query_vector, doc_vector)
         scores.append(score)
     
     best_index = np.argmax(scores)
     return documents[best_index], scores[best_index]
 
-# --- 4. THE UI LAYOUT (Cyberpunk Style) ---
+# --- 4. THE NEW LOOK UI (Modern Corporate Tech Style) ---
 
-# Sidebar Control Panel
-with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/9203/9203764.png", width=100)
-    st.title("CyberSentinel v1.0")
-    st.markdown("---")
-    st.write("🟢 **System Status:** ONLINE")
-    st.write("🛡️ **Security Level:** HIGH")
-    st.write("📂 **Database:** 5 Records Loaded")
-    st.markdown("---")
-    st.caption("Powered by Google Gemini RAG")
-
-# Main Interface
-st.title("🛡️ CyberSentinel: Threat Intelligence Hub")
+# Custom styling for a bright, professional appearance
 st.markdown("""
 <style>
-.big-font {
-    font-size:20px !important;
-    color: #00FF00;
-}
+    /* Styling the main title banner */
+    .main-title {
+        color: #1E3A8A; /* Deep Trustworthy Blue */
+        font-size: 38px;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+    .subtitle {
+        color: #4B5563; /* Slate Gray */
+        font-size: 16px;
+        margin-bottom: 25px;
+    }
+    /* Highlight box for information cards */
+    .info-card {
+        background-color: #F3F4F6;
+        border-left: 5px solid #3B82F6;
+        padding: 15px;
+        border-radius: 4px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("Welcome, Agent. Ask the Neural Core about known threats, CVEs, or hacker groups.")
+# Sidebar - Beginner Friendly Info Panel
+with st.sidebar:
+    st.markdown("<h2 style='color: #1E3A8A; margin-bottom: 0;'>🔍 SmartFinder</h2>", unsafe_allow_html=True)
+    st.caption("Your Intelligent AI Document Assistant")
+    st.markdown("---")
+    
+    # System stats rewritten in regular English
+    st.write("🤖 **AI Engine:** Ready")
+    st.write("📄 **Documents Loaded:** 5 Files Connected")
+    st.markdown("---")
+    
+    # Option 2 Integration - Completely beginner friendly explanation
+    with st.expander("📁 View the files I can read", expanded=True):
+        st.markdown("<small>I have read and memorized these 5 specific security notes. You can ask me about them using your own words!</small>", unsafe_allow_html=True)
+        st.write("")
+        for doc in documents:
+            st.markdown(f"<div style='font-size: 13px; margin-bottom: 8px; color: #374151;'>📍 {doc}</div>", unsafe_allow_html=True)
+            
+    st.markdown("---")
+    st.caption("Powered by Smart Meaning-Based Search")
 
-# Chat Input with a "Hacker" feel
-query = st.text_input("🔍 ENTER QUERY PARAMETERS:", placeholder="e.g., Who is targeting financial banks?")
+# Main Interface Header
+st.markdown("<div class='main-title'>🔍 SmartFinder AI</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>Ask a question in normal, everyday English. Our AI will understand what you mean and find the perfect match—even if you don't use exact words!</div>", unsafe_allow_html=True)
+
+# Clean Text Input
+query = st.text_input("💬 What are you looking for today?", placeholder="e.g., Which hacker group is going after banks?")
 
 if query:
-    # A fake progress bar to look like it's "Thinking"
-    with st.spinner("Decrypting Neural Pathways..."):
-        time.sleep(1) # Dramatic pause
+    # Friendly waiting indicator
+    with st.spinner("AI is reading through your files to find the right answer..."):
+        time.sleep(0.8) # Quick smooth transition
         best_doc, confidence = find_best_match(query)
     
-    # Display Results in columns
+    # Laying out the results clearly in two columns
     col1, col2 = st.columns([3, 1])
     
     with col1:
-        st.subheader("📝 Intelligence Report")
-        st.info(f"{best_doc}")
+        st.markdown("### 📄 Best Matching Document Found")
+        st.info(f"**\"{best_doc}\"**")
     
     with col2:
-        st.subheader("📊 Confidence")
-        # Color code the confidence score
-        if confidence > 0.4:  # Adjusted confidence threshold typical for raw dot products
-            st.metric(label="Match Accuracy", value=f"{int(confidence * 100)}%", delta="High Certainty")
+        st.markdown("### 📊 Search Confidence")
+        # Turn raw mathematical dot product into a friendly, readable percentage
+        display_score = int(confidence * 100)
+        if display_score > 100: display_score = 100
+        if display_score < 0: display_score = 0
+        
+        if confidence > 0.4:  
+            st.metric(label="Meaning Match Accuracy", value=f"{display_score}%", delta="Strong Match")
         else:
-            st.metric(label="Match Accuracy", value=f"{int(confidence * 100)}%", delta="Low Certainty", delta_color="inverse")
+            st.metric(label="Meaning Match Accuracy", value=f"{display_score}%", delta="Weak Match", delta_color="inverse")
 
-    with st.expander("🔎 View Vector Analysis"):
+    # Kept the deep analysis but gave it an easy description
+    with st.expander("🔬 Technical View (How the AI saw your question)"):
         q_emb = get_embedding(query)
         if q_emb:
-            st.write(f"Query Vector (First 10 Dims): {str(q_emb[:10])}...")
+            st.write("The AI converted your sentence into these structural mathematical coordinates to calculate the meaning:")
+            st.write(q_emb[:10])
+            st.caption("...showing first 10 dimensions of the meaning-vector.")
         else:
-            st.write("Could not retrieve vector dimension log.")
+            st.write("Could not retrieve mathematical vector logic.")
