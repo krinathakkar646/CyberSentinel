@@ -1,12 +1,14 @@
-# 🔍 SmartFinder AI Dashboard
+# 🔍 SmartFinder-AI
 
-An intelligent, beginner-friendly document search engine built with **Streamlit** and **Google Gemini AI**. Unlike traditional keyword searching (`Ctrl + F`), SmartFinder AI uses semantic artificial intelligence to understand the **meaning and intent** behind your questions, successfully pulling relevant text answers even if you don't use exact matching words.
+> **🔗 Live App Link:** [Launch SmartFinder AI Dashboard](https://smartfinderai.streamlit.app/)
+
+An intelligent, beginner-friendly document search engine built with **Streamlit** and **Google Gemini AI**. Unlike traditional keyword searching (`Ctrl + F`), SmartFinder-AI uses semantic artificial intelligence to understand the **meaning and intent** behind your questions, successfully pulling relevant text answers even if you don't use exact matching words.
 
 ---
 
 ## 🚀 Key Features
 
-* **Interactive Setup Guide:** A clean, welcoming walkthrough box at the top of the interface to guide non-technical users step-by-step.
+* **Interactive Setup Guide:** A clean, welcoming walkthrough box at the top of the interface to guide new or non-technical users step-by-step.
 * **Live PDF Upload Matrix:** Drag and drop your own custom PDF documents directly into the dashboard. The app dynamically reads, splits, and memorizes your text data instantly.
 * **Semantic Vector Matching:** Powered by the modern `gemini-embedding-001` infrastructure to compare abstract concepts instead of raw characters.
 * **Live Sidebar Database Viewer:** Users can glance at an expandable file library on the left sidebar to see exactly what facts the AI has memorized.
@@ -29,6 +31,5 @@ To run this dashboard locally on your machine, follow these steps:
 
 ### 1. Clone the Repository
 ```bash
-git clone (https://github.com/krinathakkar646/SmartFinder-AI.git)
+git clone [https://github.com/krinathakkar646/SmartFinder-AI.git](https://github.com/krinathakkar646/SmartFinder-AI.git)
 cd SmartFinder-AI
-
