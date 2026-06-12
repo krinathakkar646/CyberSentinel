@@ -1,33 +1,33 @@
-# 🛡️ CyberSentinel: AI Threat Intelligence Dashboard
+# 🔍 SmartFinder AI Dashboard
 
-> **"A Semantic Search Engine for Cybersecurity using Retrieval-Augmented Generation (RAG)."**
+An intelligent, beginner-friendly document search engine built with **Streamlit** and **Google Gemini AI**. Unlike traditional keyword searching (`Ctrl + F`), SmartFinder AI uses semantic artificial intelligence to understand the **meaning and intent** behind your questions, successfully pulling relevant text answers even if you don't use exact matching words.
 
-**CyberSentinel** is a Next-Gen Threat Intelligence interface that replaces standard keyword search with **Vector Embeddings**. It allows security analysts to query a database using *natural language concepts* rather than exact matches.
+---
 
+## 🚀 Key Features
 
-## 🧠 The Problem vs. The Solution
+* **Interactive Setup Guide:** A clean, welcoming walkthrough box at the top of the interface to guide non-technical users step-by-step.
+* **Live PDF Upload Matrix:** Drag and drop your own custom PDF documents directly into the dashboard. The app dynamically reads, splits, and memorizes your text data instantly.
+* **Semantic Vector Matching:** Powered by the modern `gemini-embedding-001` infrastructure to compare abstract concepts instead of raw characters.
+* **Live Sidebar Database Viewer:** Users can glance at an expandable file library on the left sidebar to see exactly what facts the AI has memorized.
+* **Performance Optimization:** Utilizes caching loops (`@st.cache_data`) to prevent redundant API overhead and maintain instant lookup times.
 
-| Standard Search (Ctrl+F) | 🛡️ CyberSentinel (RAG) |
-| :--- | :--- |
-| Searches for **exact words** (e.g., "Toaster"). | Searches for **meaning** (e.g., "Kitchen Appliance"). |
-| Fails if the hacker uses slang/synonyms. | Understands context and intent. |
-| Returns zero results for vague queries. | Returns the statistically closest match. |
+---
 
-## ⚡ Key Features
-- **Neural Memory:** Uses Google's `text-embedding-004` model to convert text into high-dimensional vectors.
-- **Cosine Similarity Engine:** Calculates the mathematical distance between user queries and stored threat logs using `NumPy`.
-- **Live Confidence Scoring:** Displays a real-time percentage of how "sure" the AI is about the match.
-- **Cyberpunk UI:** Built with **Streamlit** for a modern, dark-mode security dashboard experience.
+## 🛠️ Technology Stack
 
-## 🛠️ Tech Stack
-- **Python 3.12**
-- **Streamlit** (Frontend Interface)
-- **Google Gemini API** (Embeddings Model)
-- **NumPy** (Vector Mathematics)
+* **Frontend UI:** [Streamlit](https://streamlit.io/) (Python Web Framework)
+* **AI Engine:** [Google GenAI SDK](https://github.com/google/generative-ai-python) (`gemini-embedding-001`)
+* **Document Processing:** `pypdf` (Text extraction utility)
+* **Vector Mathematics:** `numpy` (Dot product calculation arrays)
 
-## 📦 Installation & Setup
+---
+
+## 📋 Pre-requisites & Setup
+
+To run this dashboard locally on your machine, follow these steps:
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/krinathakkar646/cyber-sentinel.git](https://github.com/krinathakkar646/cyber-sentinel.git)
-cd cyber-sentinel
+git clone (https://github.com/krinathakkar646/CyberSentinel.git)
+cd CyberSentinel
