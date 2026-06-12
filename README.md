@@ -29,5 +29,6 @@ To run this dashboard locally on your machine, follow these steps:
 
 ### 1. Clone the Repository
 ```bash
-git clone (https://github.com/krinathakkar646/CyberSentinel.git)
-cd CyberSentinel
+git clone (https://github.com/krinathakkar646/SmartFinder-AI.git)
+cd SmartFinder-AI
+
